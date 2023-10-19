@@ -346,7 +346,6 @@ void recordHistory()
          float errs = sent - received;           // Errors (...)
          float ratio;                  
 
-         ratio = errs / sent; // calcula a pcol de cada Station
          
          if(errs < 0){
              ratio = 0;
