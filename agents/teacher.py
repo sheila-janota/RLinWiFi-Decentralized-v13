@@ -17,7 +17,7 @@ import csv
 class Logger:
     def __init__(self, send_logs, tags, parameters, experiment=None):
         #self.stations = 5
-        self.stations = 5
+        self.stations = 30
         self.send_logs = send_logs
         if self.send_logs:
             if experiment is None:
@@ -37,6 +37,7 @@ class Logger:
                 self.experiment = experiment
         self.sent_mb = 0
         self.speed_window = deque(maxlen=100)
+        self.speed_window_lists = [deque(maxlen=100) for _ in range(self.stations)]
         self.speed_window0 = deque(maxlen=100)
         self.speed_window1 = deque(maxlen=100)
         
@@ -70,11 +71,14 @@ class Logger:
             round_mb_list = []  # Initialize an empty list
             for i in range(self.stations):
                 round_mb_list.append(info[i])
+                #print("round_mb_list", round_mb_list)
 
             # round_mb = np.mean([float(i.split("|")[0]) for i in info])
             #round_mb = info[0]
             round_mb0 = info[0]
+            #print("round_mb_0", round_mb0)
             round_mb1 = info[1]
+            #print("round_mb_1", round_mb1)
             
         except Exception as e:
             print(info)
@@ -83,17 +87,21 @@ class Logger:
         #self.speed_window.append(round_mb)
         #self.speed_window.append(round_mb0+round_mb1)
         self.speed_window.append(sum(round_mb_list))
-        #self.speed_window0.append(round_mb0)
-        #self.speed_window1.append(round_mb1)
+        for i in range(self.stations):
+            self.speed_window_lists[i].append(round_mb_list[i])
         
+        self.speed_window0.append(round_mb0)        
+        self.speed_window1.append(round_mb1)      
         
         
         self.current_speed = np.mean(np.asarray(self.speed_window)/self.step_time)
         current_speed_list = []
         for i in range(self.stations):
-            current_speed_list.append( np.mean(np.asarray(round_mb_list[i])/self.step_time)   )
-        #self.current_speed0 = np.mean(np.asarray(self.speed_window0)/self.step_time)
-        #self.current_speed1 = np.mean(np.asarray(self.speed_window1)/self.step_time)
+            current_speed_list.append(np.mean(np.asarray(self.speed_window_lists[i]) / self.step_time))
+            #print ("curr_speed_list:", current_speed_list) # speed window de cada station
+            
+        self.current_speed0 = np.mean(np.asarray(self.speed_window0)/self.step_time)
+        self.current_speed1 = np.mean(np.asarray(self.speed_window1)/self.step_time)       
               
        
         
@@ -158,7 +166,7 @@ class Logger:
             
     def log_episode(self, cumulative_reward, speed, step):
         if self.send_logs:
-            self.experiment.log_metric("Cumulative reward", cumulative_reward, step=step)
+            #self.experiment.log_metric("Cumulative reward", cumulative_reward, step=step)
             self.experiment.log_metric("Speed", speed, step=step)
 
         self.sent_mb = 0
@@ -417,7 +425,7 @@ class EnvWrapper:
             sys.path.append("../../")
             waf_pwd = find_waf_path("../../")
 
-        command = f'{waf_pwd} --run "RLinWiFi-Decentralized-v13'
+        command = f'{waf_pwd} --run "RLinWiFi-Decentralized-v13-30-station'
         for key, val in params.items():
             command+=f" --{key}={val}"
 
